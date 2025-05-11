@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Galeria zdjęć</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .gallery img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .gallery img:hover {
+            transform: scale(1.05);
+        }
+
+        .back-button {
+            display: block;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .back-button a {
+            text-decoration: none;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .back-button a:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Galeria zdjęć</h1>
+
+    <div class="gallery">
+        <img src="https://houseofpostcards.pl/userdata/public/gfx/28215/Sweet-cupcake.jpg">
+        <img src="https://thumbs.dreamstime.com/b/wy%C5%9Bmienicie-urodzinowa-babeczka-z-%C5%9Bwieczk%C4%85-126899507.jpg">
+        <img src="https://thumbs.dreamstime.com/b/urodzinowa-babeczka-19543435.jpg">
+        <img src="https://previews.123rf.com/images/amawasri/amawasri1601/amawasri160100053/51379568-wiele-s%C5%82odkich-urodzinowych-babeczek-z-kwiatami-i-kremem-ma%C5%9Blanym-i-fili%C5%BCank%C4%85-herbaty.jpg">
+        <img src="https://e-torty.pl/img1/products/205/BBK_10.jpg">
+    </div>
+
+    <div class="back-button">
+        <a href="babeczki.html">← Wróć na stronę główną</a>
+    </div>
+
+</body>
+</html>
