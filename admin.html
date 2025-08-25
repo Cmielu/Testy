@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>🛠️ Panel Administratora</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 40px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .hidden {
+      display: none;
+    }
+    .account {
+      background: #222;
+      padding: 20px;
+      margin: 10px 0;
+      border-radius: 10px;
+    }
+    input, button {
+      margin: 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      cursor: pointer;
+      background: #0f0;
+      color: #000;
+    }
+    .danger {
+      background: #f00;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🛠️ Panel Administratora</h1>
+
+<div id="adminLogin">
+  <p>🔒 Podaj hasło administratora:</p>
+  <input type="password" id="adminPass" placeholder="Hasło admina">
+  <button onclick="verifyAdmin()">Zaloguj</button>
+  <p id="adminError" style="color: red;"></p>
+</div>
+
+<div id="adminPanel" class="hidden">
+  <h2>📋 Lista Kont</h2>
+  <hr>
+  <div id="accountList"></div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = "admin123";
+
+function verifyAdmin() {
+  const pass = document.getElementById("adminPass").value;
+  if (pass === ADMIN_PASSWORD) {
+    document.getElementById("adminLogin").classList.add("hidden");
+    document.getElementById("adminPanel").classList.remove("hidden");
+    loadAccounts();
+  } else {
+    document.getElementById("adminError").textContent = "❌ Błędne hasło admina!";
+  }
+}
+
+function loadAccounts() {
+  const container = document.getElementById("accountList");
+  container.innerHTML = "";
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.endsWith("_coins")) {
+      const login = key.replace("_coins", "");
+      const coins = localStorage.getItem(key);
+      const pass = localStorage.getItem(login + "_pass") || "(brak)";
+      const level = localStorage.getItem(login + "_level") || 1;
+
+      const html = `
+        <div class="account">
+          <strong>👤 ${login}</strong><br>
+          💰 Monety: ${coins}<br>
+          🔑 Hasło: ${pass}<br>
+          🎚️ Poziom: ${level}<br><br>
+
+          ➕ <input type="number" id="${login}_add" placeholder="Dodaj monety">
+          <button onclick="addCoins('${login}')">Dodaj</button>
+
+          ➖ <input type="number" id="${login}_sub" placeholder="Odejmij monety">
+          <button onclick="subtractCoins('${login}')">Odejmij</button><br><br>
+
+          🆙 <input type="number" id="${login}_lvl" placeholder="Nowy poziom">
+          <button onclick="setLevel('${login}')">Ustaw poziom</button><br><br>
+
+          ✏️ <input type="text" id="${login}_newLogin" placeholder="Nowy login">
+          <button onclick="changeLogin('${login}')">Zmień login</button><br>
+
+          🔑 <input type="text" id="${login}_newPass" placeholder="Nowe hasło">
+          <button onclick="changePassword('${login}')">Zmień hasło</button><br><br>
+
+          🎁 <input type="number" id="${login}_gifts" placeholder="Dodaj prezentów">
+          <button onclick="addGifts('${login}')">Dodaj prezenty</button><br><br>
+
+          🗑️ <button class="danger" onclick="deleteAccount('${login}')">Usuń konto</button>
+        </div>
+      `;
+      container.innerHTML += html;
+    }
+  }
+}
+
+function addCoins(user) {
+  const val = parseInt(document.getElementById(user + "_add").value);
+  if (!isNaN(val) && val > 0) {
+    const current = parseInt(localStorage.getItem(user + "_coins") || 0);
+    localStorage.setItem(user + "_coins", current + val);
+    loadAccounts();
+  }
+}
+
+function subtractCoins(user) {
+  const val = parseInt(document.getElementById(user + "_sub").value);
+  if (!isNaN(val) && val > 0) {
+    const current = parseInt(localStorage.getItem(user + "_coins") || 0);
+    localStorage.setItem(user + "_coins", Math.max(0, current - val));
+    loadAccounts();
+  }
+}
+
+function setLevel(user) {
+  const newLevel = parseInt(document.getElementById(user + "_lvl").value);
+  if (!isNaN(newLevel) && newLevel > 0) {
+    localStorage.setItem(user + "_level", newLevel);
+    loadAccounts();
+  }
+}
+
+function changePassword(user) {
+  const newPass = document.getElementById(user + "_newPass").value;
+  if (newPass.length > 0) {
+    localStorage.setItem(user + "_pass", newPass);
+    loadAccounts();
+  }
+}
+
+function changeLogin(oldLogin) {
+  const newLogin = document.getElementById(oldLogin + "_newLogin").value.trim();
+  if (!newLogin) return;
+
+  const coins = localStorage.getItem(oldLogin + "_coins");
+  const pass = localStorage.getItem(oldLogin + "_pass");
+  const level = localStorage.getItem(oldLogin + "_level") || 1;
+
+  localStorage.setItem(newLogin + "_coins", coins);
+  localStorage.setItem(newLogin + "_pass", pass);
+  localStorage.setItem(newLogin + "_level", level);
+
+  localStorage.removeItem(oldLogin + "_coins");
+  localStorage.removeItem(oldLogin + "_pass");
+  localStorage.removeItem(oldLogin + "_level");
+
+  loadAccounts();
+}
+
+function deleteAccount(login) {
+  if (confirm(`Czy na pewno chcesz usunąć konto: ${login}?`)) {
+    localStorage.removeItem(login + "_coins");
+    localStorage.removeItem(login + "_pass");
+    localStorage.removeItem(login + "_level");
+    localStorage.removeItem(login + "_gifts");
+    localStorage.removeItem(login + "_diamonds");
+    localStorage.removeItem(login + "_prezenty");
+    loadAccounts();
+  }
+}
+
+function addGifts(user) {
+  const val = parseInt(document.getElementById(user + "_gifts").value);
+  if (!isNaN(val) && val > 0) {
+    const current = parseInt(localStorage.getItem(user + "_prezenty") || 0);
+    localStorage.setItem(user + "_prezenty", current + val);
+    loadAccounts();
+  }
+}
+</script>
+
+<div id="miniProfil"></div>
+<script>
+function pokazMiniProfil() {
+  const container = document.getElementById("miniProfil");
+  const user = localStorage.getItem("loggedUser") || localStorage.getItem("currentUser");
+
+  container.style.position = "fixed";
+  container.style.top = "10px";
+  container.style.right = "10px";
+  container.style.background = "#222";
+  container.style.padding = "12px 16px";
+  container.style.borderRadius = "12px";
+  container.style.boxShadow = "0 0 10px #000";
+  container.style.zIndex = "999";
+  container.style.color = "#fff";
+  container.style.fontSize = "14px";
+  container.style.lineHeight = "1.6";
+  container.style.textAlign = "left";
+  container.style.minWidth = "180px";
+
+  if (!user) {
+    container.innerHTML = `
+      <strong>Nie jesteś zalogowany</strong><br>
+      <a href="index.html" style="color:#0f0;text-decoration:underline;">🔐 Zaloguj się</a>
+    `;
+  } else {
+    const coins = localStorage.getItem(user + "_coins") || 0;
+    const diamonds = localStorage.getItem(user + "_diamonds") || 0;
+    const gifts = localStorage.getItem(user + "_prezenty") || 0;
+
+    container.innerHTML = `
+      <strong>👤 ${user}</strong><br>
+      💰 Monety: ${coins}<br>
+      💎 Diamenty: ${diamonds}<br>
+      🎁 Prezenty: ${gifts}<br>
+      <a href="index.html" style="color:#0f0;text-decoration:underline;">🚪 Wyloguj</a>
+    `;
+  }
+}
+
+pokazMiniProfil();
+</script>
+
+<div id="sideMenuRight">
+  <a href="index.html">🏠 Menu</a>
+  <a href="gracz.html">🎰 Automat</a>
+  <a href="prezent.html">🎁 Prezent</a>
+  <a href="ranking.html">🏆 Ranking</a>
+  <a href="historia.html">📜 Historia</a>
+  <a href="admin.html">🛠️ Admin</a>
+</div>
+
+<style>
+  #sideMenuRight {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #222;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px #000;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #sideMenuRight a {
+    color: #0f0;
+    text-decoration: none;
+    font-size: 16px;
+    background: #111;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.3s;
+  }
+  #sideMenuRight a:hover {
+    background: #0f0;
+    color: #000;
+  }
+  @media (max-width: 700px) {
+    #sideMenuRight {
+      position: static;
+      margin-top: 20px;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #sideMenuRight a {
+      font-size: 14px;
+      margin: 4px;
+    }
+  }
+</style>
+
+</body>
+</html>

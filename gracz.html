@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Automat hazardowy</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: #fff;
+      padding: 40px;
+      text-align: center;
+    }
+    #slots {
+      font-size: 80px;
+      margin: 20px;
+    }
+    input, button, select {
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      margin: 10px;
+    }
+    button {
+      background: #0f0;
+      color: #000;
+      cursor: pointer;
+    }
+    .top {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+    }
+    #symbolSet {
+      font-size: 16px;
+      color: #ccc;
+    }
+    #expBar {
+      width: 100%;
+      background: #444;
+      border-radius: 10px;
+      margin: 10px auto;
+      height: 20px;
+      max-width: 500px;
+    }
+    #expFill {
+      height: 100%;
+      background: #0f0;
+      border-radius: 10px 0 0 10px;
+      width: 0%;
+    }
+  </style>
+</head>
+<body>
+
+
+  <div class="top">
+    <button onclick="logout()">⬅️ Wyloguj</button>
+  </div>
+
+  <h1>🎰 Automat hazardowy 🎰</h1>
+  <h2 id="welcome">Witaj!</h2>
+  <div id="coins">Monety: 0</div>
+  <div id="slots">❓ ❓ ❓</div>
+
+  <label for="difficulty">🎯 Poziom trudności:</label>
+  <select id="difficulty" onchange="showAvailableSymbols()">
+    <option value="easy">Łatwy</option>
+    <option value="medium" selected>Średni</option>
+    <option value="hard">Trudny</option>
+  </select>
+
+  <p id="symbolSet"></p>
+
+  <input type="number" id="bet" value="1" min="1">
+  <button onclick="spin()">Zakręć</button>
+
+  <div id="result"></div>
+
+  <h3>🔼 Poziom: <span id="level">0</span></h3>
+  <div id="expBar">
+    <div id="expFill"></div>
+  </div>
+  <p>EXP: <span id="exp">0</span>/100 (<span id="toNext">100</span> do następnego poziomu)</p>
+
+  <script>
+    const symbols = ['🍒', '🍋', '🍊', '🍉', '🔔', '⭐', '7️⃣'];
+    const multipliers = {
+      '🍒': 2, '🍋': 2.5, '🍊': 3, '🍉': 4,
+      '🔔': 5, '⭐': 7, '7️⃣': 10
+    };
+
+    const user = localStorage.getItem('currentUser');
+    if (!user) {
+      alert('🔒 Brak zalogowanego użytkownika.');
+      window.location.href = 'index.html';
+    }
+
+    document.getElementById('welcome').textContent = `Witaj, ${user}!`;
+
+    let coins = parseInt(localStorage.getItem(user + '_coins')) || 0;
+    let exp = parseFloat(localStorage.getItem(user + '_exp')) || 0;
+
+    updateCoins();
+    updateExp();
+    showAvailableSymbols();
+
+    function updateCoins() {
+      document.getElementById('coins').textContent = `Monety: ${Math.floor(coins)}`;
+      localStorage.setItem(user + '_coins', coins);
+    }
+
+    function updateExp() {
+      const level = Math.floor(exp / 100);
+      const currentExp = (exp % 100).toFixed(2);
+      const percent = Math.min((currentExp / 100) * 100, 100);
+
+      document.getElementById('level').textContent = level;
+      document.getElementById('exp').textContent = currentExp;
+      document.getElementById('toNext').textContent = (100 - currentExp).toFixed(2);
+      document.getElementById('expFill').style.width = `${percent}%`;
+
+      localStorage.setItem(user + '_exp', exp);
+    }
+
+    function showAvailableSymbols() {
+      const difficulty = document.getElementById('difficulty').value;
+      let availableSymbols = [];
+
+      if (difficulty === 'easy') {
+        availableSymbols = symbols.slice(0, 5);
+      } else if (difficulty === 'medium') {
+        availableSymbols = symbols.slice(0, 6);
+      } else {
+        availableSymbols = symbols;
+      }
+
+      document.getElementById('symbolSet').textContent =
+        'Symbole w tej trudności: ' + availableSymbols.join(' ');
+    }
+
+    function spin() {
+      const bet = parseInt(document.getElementById('bet').value);
+      const res = document.getElementById('result');
+
+      if (isNaN(bet) || bet < 1) {
+        res.textContent = '⚠️ Minimalny zakład to 1';
+        return;
+      }
+
+      if (coins < bet) {
+        res.textContent = '❌ Nie masz tyle monet!';
+        return;
+      }
+
+      coins -= bet;
+      updateCoins();
+
+      const difficulty = document.getElementById('difficulty').value;
+      let availableSymbols = [];
+
+      if (difficulty === 'easy') {
+        availableSymbols = symbols.slice(0, 5);
+      } else if (difficulty === 'medium') {
+        availableSymbols = symbols.slice(0, 6);
+      } else {
+        availableSymbols = symbols;
+      }
+
+      const draw = [0, 0, 0].map(() =>
+        availableSymbols[Math.floor(Math.random() * availableSymbols.length)]
+      );
+
+      document.getElementById('slots').textContent = draw.join(' ');
+
+      const win = (draw[0] === draw[1] && draw[1] === draw[2])
+        ? Math.ceil(bet * multipliers[draw[0]])
+        : 0;
+
+      if (win > 0) {
+        coins += win;
+        res.textContent = `🎉 WYGRYWASZ! +${win} monet!`;
+      } else {
+        res.textContent = `💔 PRZEGRYWASZ ${bet} monet.`;
+      }
+
+      updateCoins();
+
+      // Oblicz EXP
+      const gainedExp = bet * 0.01;
+      exp += gainedExp;
+      updateExp();
+
+      // Zapisz historię
+      const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const gameResult = `${timestamp} | Poziom: ${difficulty} | Zakład: ${bet} | Wynik: ${draw.join(' ')} | ${win > 0 ? 'Wygrana' : 'Przegrana'}`;
+      const oldHistory = JSON.parse(localStorage.getItem(user + "_history") || "[]");
+      oldHistory.push(gameResult);
+      localStorage.setItem(user + "_history", JSON.stringify(oldHistory));
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      window.location.href = 'index.html';
+    }
+  </script>
+<div id="miniProfil"></div>
+
+<script>
+  function pokazMiniProfil() {
+    const container = document.getElementById("miniProfil");
+    const user = localStorage.getItem("loggedUser") || localStorage.getItem("currentUser");
+
+    container.style.position = "fixed";
+    container.style.top = "10px";
+    container.style.right = "10px";
+    container.style.background = "#222";
+    container.style.padding = "12px 16px";
+    container.style.borderRadius = "12px";
+    container.style.boxShadow = "0 0 10px #000";
+    container.style.zIndex = "999";
+    container.style.color = "#fff";
+    container.style.fontSize = "14px";
+    container.style.lineHeight = "1.6";
+    container.style.textAlign = "left";
+    container.style.minWidth = "180px";
+
+    if (!user) {
+      container.innerHTML = `
+        <strong>Nie jesteś zalogowany</strong><br>
+        <a href="index.html" style="color:#0f0;text-decoration:underline;">🔐 Zaloguj się</a>
+      `;
+    } else {
+      const coins = localStorage.getItem(user + "_coins") || 0;
+      const diamonds = localStorage.getItem(user + "_diamonds") || 0;
+      const gifts = localStorage.getItem(user + "_prezenty") || 0;
+
+      container.innerHTML = `
+        <strong>👤 ${user}</strong><br>
+        💰 Monety: ${coins}<br>
+        💎 Diamenty: ${diamonds}<br>
+        🎁 Prezenty: ${gifts}<br>
+        <a href="index.html" style="color:#0f0;text-decoration:underline;">🚪 Wyloguj</a>
+      `;
+    }
+  }
+
+  pokazMiniProfil();
+</script>
+
+
+<!-- Menu boczne po prawej, na dole -->
+<div id="sideMenuRight">
+  <a href="index.html">🏠 Menu</a>
+  <a href="gracz.html">🎰 Automat</a>
+  <a href="prezent.html">🎁 Prezent</a>
+  <a href="ranking.html">🏆 Ranking</a>
+  <a href="historia.html">📜 Historia</a>
+  <a href="admin.html">🛠️ Admin</a>
+</div>
+
+<style>
+  #sideMenuRight {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #222;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px #000;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #sideMenuRight a {
+    color: #0f0;
+    text-decoration: none;
+    font-size: 16px;
+    background: #111;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.3s;
+  }
+
+  #sideMenuRight a:hover {
+    background: #0f0;
+    color: #000;
+  }
+
+  @media (max-width: 700px) {
+    #sideMenuRight {
+      position: static;
+      margin-top: 20px;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #sideMenuRight a {
+      font-size: 14px;
+      margin: 4px;
+    }
+  }
+</style>
+
+
+</body>
+</html>

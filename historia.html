@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>📜 Historia Gier</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .filters {
+      text-align: center;
+      margin: 20px;
+    }
+
+    .filters input, .filters select {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .history {
+      max-width: 800px;
+      margin: 30px auto;
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      overflow-y: auto;
+      max-height: 500px;
+    }
+
+    .entry {
+      border-bottom: 1px solid #444;
+      padding: 10px 0;
+    }
+
+    .entry:last-child {
+      border-bottom: none;
+    }
+
+    .back {
+      display: block;
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    .back a {
+      color: #0f0;
+      text-decoration: none;
+    }
+
+    .back a:hover {
+      text-decoration: underline;
+    }
+
+    .summary {
+      text-align: center;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📜 Historia Twoich Gier</h1>
+
+  <div class="filters">
+    <label>📅 Od:
+      <input type="datetime-local" id="startDate" onchange="loadHistory()">
+    </label>
+    <label>📅 Do:
+      <input type="datetime-local" id="endDate" onchange="loadHistory()">
+    </label>
+    <label>🎯 Trudność:
+      <select id="difficultyFilter" onchange="loadHistory()">
+        <option value="all">Wszystkie</option>
+        <option value="easy">Łatwy</option>
+        <option value="medium">Średni</option>
+        <option value="hard">Trudny</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="summary" id="summaryBox">📊 Ładowanie...</div>
+
+  <div class="history" id="historyBox">
+    <p>⏳ Wczytywanie historii...</p>
+  </div>
+
+  <div class="back">
+    <a href="index.html">⬅️ Powrót do Menu</a>
+  </div>
+
+  <script>
+    const currentUser = localStorage.getItem("currentUser");
+
+    function parseDate(entry) {
+      const match = entry.match(/^(.+?)\s\|/);
+      return match ? new Date(match[1]) : null;
+    }
+
+    function getDifficulty(entry) {
+      const match = entry.match(/\|\sPoziom:\s(.*?)\s\|/);
+      return match ? match[1] : "unknown";
+    }
+
+    function loadHistory() {
+      const historyBox = document.getElementById("historyBox");
+      const summaryBox = document.getElementById("summaryBox");
+
+      if (!currentUser) {
+        historyBox.innerHTML = "<p style='color: red;'>❌ Nie jesteś zalogowany.</p>";
+        summaryBox.textContent = "";
+        return;
+      }
+
+      const history = JSON.parse(localStorage.getItem(currentUser + "_history") || "[]");
+      const difficultyFilter = document.getElementById("difficultyFilter").value;
+
+      const startDateInput = document.getElementById("startDate").value;
+      const endDateInput = document.getElementById("endDate").value;
+
+      const startDate = startDateInput ? new Date(startDateInput) : null;
+      const endDate = endDateInput ? new Date(endDateInput) : null;
+
+      let winTotal = 0;
+      let lossTotal = 0;
+
+      const filtered = history.filter(entry => {
+        const date = parseDate(entry);
+        const diff = getDifficulty(entry);
+
+        if (!date) return false;
+
+        const matchStart = !startDate || date >= startDate;
+        const matchEnd = !endDate || date <= endDate;
+        const matchDiff = difficultyFilter === "all" || diff === difficultyFilter;
+
+        return matchStart && matchEnd && matchDiff;
+      });
+
+      if (filtered.length === 0) {
+        historyBox.innerHTML = "<p>📭 Brak pasujących wyników.</p>";
+        summaryBox.textContent = "Brak statystyk do pokazania.";
+        return;
+      }
+
+      historyBox.innerHTML = "";
+
+      filtered.reverse().forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "entry";
+        div.textContent = `🕹️ ${entry}`;
+        historyBox.appendChild(div);
+
+        // Parsuj zakład
+        const betMatch = entry.match(/Zakład:\s(\d+)/);
+        const bet = betMatch ? parseInt(betMatch[1]) : 0;
+
+        const isWin = entry.trim().endsWith("Wygrana");
+
+        if (isWin) {
+          const symbolMatch = entry.match(/Wynik: (.*?) \|/);
+          if (symbolMatch) {
+            const symbols = symbolMatch[1].trim().split(" ");
+            const symbol = symbols[0];
+            const multipliers = {
+              '🍒': 2, '🍋': 2.5, '🍊': 3, '🍉': 4,
+              '🔔': 5, '⭐': 7, '7️⃣': 10
+            };
+            const multiplier = multipliers[symbol] || 1;
+            winTotal += Math.ceil(bet * multiplier);
+          }
+        } else {
+          lossTotal += bet;
+        }
+      });
+
+      summaryBox.textContent = `📊 Podsumowanie: Wygrane: 💰 ${winTotal} monet | Przegrane: ❌ ${lossTotal} monet`;
+    }
+
+    // Wczytaj historię po załadowaniu
+    loadHistory();
+  </script>
+<div id="miniProfil"></div>
+
+<script>
+  function pokazMiniProfil() {
+    const container = document.getElementById("miniProfil");
+    const user = localStorage.getItem("loggedUser") || localStorage.getItem("currentUser");
+
+    container.style.position = "fixed";
+    container.style.top = "10px";
+    container.style.right = "10px";
+    container.style.background = "#222";
+    container.style.padding = "12px 16px";
+    container.style.borderRadius = "12px";
+    container.style.boxShadow = "0 0 10px #000";
+    container.style.zIndex = "999";
+    container.style.color = "#fff";
+    container.style.fontSize = "14px";
+    container.style.lineHeight = "1.6";
+    container.style.textAlign = "left";
+    container.style.minWidth = "180px";
+
+    if (!user) {
+      container.innerHTML = `
+        <strong>Nie jesteś zalogowany</strong><br>
+        <a href="index.html" style="color:#0f0;text-decoration:underline;">🔐 Zaloguj się</a>
+      `;
+    } else {
+      const coins = localStorage.getItem(user + "_coins") || 0;
+      const diamonds = localStorage.getItem(user + "_diamonds") || 0;
+      const gifts = localStorage.getItem(user + "_prezenty") || 0;
+
+      container.innerHTML = `
+        <strong>👤 ${user}</strong><br>
+        💰 Monety: ${coins}<br>
+        💎 Diamenty: ${diamonds}<br>
+        🎁 Prezenty: ${gifts}<br>
+        <a href="index.html" style="color:#0f0;text-decoration:underline;">🚪 Wyloguj</a>
+      `;
+    }
+  }
+
+  pokazMiniProfil();
+</script>
+
+
+<!-- Menu boczne po prawej, na dole -->
+<div id="sideMenuRight">
+  <a href="index.html">🏠 Menu</a>
+  <a href="gracz.html">🎰 Automat</a>
+  <a href="prezent.html">🎁 Prezent</a>
+  <a href="ranking.html">🏆 Ranking</a>
+  <a href="historia.html">📜 Historia</a>
+  <a href="admin.html">🛠️ Admin</a>
+</div>
+
+<style>
+  #sideMenuRight {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #222;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px #000;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #sideMenuRight a {
+    color: #0f0;
+    text-decoration: none;
+    font-size: 16px;
+    background: #111;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.3s;
+  }
+
+  #sideMenuRight a:hover {
+    background: #0f0;
+    color: #000;
+  }
+
+  @media (max-width: 700px) {
+    #sideMenuRight {
+      position: static;
+      margin-top: 20px;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #sideMenuRight a {
+      font-size: 14px;
+      margin: 4px;
+    }
+  }
+</style>
+
+
+</body>
+</html>
